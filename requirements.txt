@@ -1,0 +1,23 @@
+# OCR and vision
+chandra-ocr[hf]
+pymupdf
+opencv-python
+
+# Neural components
+torch
+transformers
+sentence-transformers
+accelerate
+bitsandbytes
+
+# Mapping, matching and scoring
+scipy
+rapidfuzz
+numpy
+pandas
+
+# Reporting and benchmarking
+python-docx
+markdown
+jiwer
+hf_transfer
