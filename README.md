@@ -1,4 +1,14 @@
-# EvalDesk
+<p align="center"><img src="assets/banner.png" alt="EvalDesk: automated evaluation of handwritten examination booklets" width="100%"></p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white">
+  <img src="https://img.shields.io/badge/OCR-Chandra%20OCR%202-D9734E">
+  <img src="https://img.shields.io/badge/LLM-Qwen3--1.7B-6F8FA6">
+  <img src="https://img.shields.io/badge/embeddings-BGE--large-8FAE95">
+  <img src="https://img.shields.io/badge/OpenCV-page%20router-5C3EE8?logo=opencv&logoColor=white">
+  <img src="https://img.shields.io/badge/HF%20Spaces-NVIDIA%20L4-FFD21E?logo=huggingface&logoColor=black">
+  <img src="https://img.shields.io/badge/license-MIT-22c55e">
+</p>
 
 **Automated evaluation of handwritten examination booklets — from scanned pages to a per-question mark sheet.**
 
@@ -24,13 +34,25 @@ Each of the three design decisions below exists to address one of these.
 
 ## Pipeline
 
+<p align="center"><img src="assets/pipeline.png" alt="EvalDesk pipeline" width="100%"></p>
+
+<details><summary>Same pipeline as a diagram you can read in plain text</summary>
+
+```mermaid
+flowchart LR
+    QP[Question paper] --> PRE
+    AK[Answer key] --> PRE
+    SB[Student booklet] --> PRE
+    PRE[Preprocess<br/>deskew · denoise · grayscale] --> ROUTE{Page router}
+    ROUTE -->|text| OCR[Chandra OCR 2]
+    ROUTE -->|diagram| CROP[Crop & preserve]
+    ROUTE -->|blank| SKIP[Flag & skip]
+    OCR --> MAP[Answer → question<br/>markers + Hungarian]
+    MAP --> GRADE[Qwen3 scorer<br/>+ STS/NLI verifier]
+    GRADE --> DOCX[DOCX report]
+    CROP --> DOCX
 ```
-question paper ─┐
-answer key ─────┼──▶ preprocess ──▶ OCR ──▶ answer→question ──▶ rubric ──▶ grade ──▶ DOCX
-student sheet ──┘    (deskew,       (VLM)    mapping            (auto)     (LLM +     report
-                      threshold,             (markers +                     STS/NLI
-                      denoise)               Hungarian)                     verifier)
-```
+</details>
 
 ### 1. Recognition — chosen by measurement, not assumption
 
@@ -44,6 +66,8 @@ Because OCR quality caps everything downstream, six engines were benchmarked on 
 | EasyOCR | classical pipeline | 1.68 | 31.81 |
 | Tesseract | classical pipeline | 1.68 | 24.01 |
 | TrOCR | line-level transformer | 0.84 | 3.83 |
+
+<p align="center"><img src="assets/ocr_benchmark.png" alt="OCR benchmark" width="100%"></p>
 
 Two results are worth dwelling on.
 
@@ -68,9 +92,13 @@ The working detector strips the printed scaffolding *first*, then separates hand
 | **Glyph-ink fraction** | **0.015–0.034** | **0.002–0.008** | **0.0001–0.0005** |
 | **Drawing share of ink** | **11–37%** | **43–76%** | — |
 
+<p align="center"><img src="assets/page_router.png" alt="Page router feature ranges" width="100%"></p>
+
 The naive rows overlap; the final rows are disjoint. That separation is why a simple rule works. Validated **34/34** on a real 34-page marine-engineering booklet (18 text, 5 diagram, 11 blank). Pure OpenCV — no extra model to train or load.
 
 ### 3. Answer-to-question mapping — order-independent
+
+<p align="center"><img src="assets/answer_mapping.png" alt="Two-tier answer mapping" width="100%"></p>
 
 **Tier 1** detects written question markers by regular expressions hardened against characteristic OCR confusions (S read as 5, O as 0, dashes as digits, corrupted `NN-(1)` part markers). Duplicate markers from misrecognition have their number-match bonus suppressed so the block is assigned by content instead.
 
@@ -79,6 +107,8 @@ The naive rows overlap; the final rows are disjoint. That separation is why a si
 ### 4. Grading — arrived at by discarding two simpler designs
 
 This is the part I'd most want to be asked about in an interview, because the final design is the third attempt.
+
+<p align="center"><img src="assets/grading_evolution.png" alt="Three grading designs" width="100%"></p>
 
 **Attempt 1 — bi-encoder similarity. Rejected.** Sentence-BERT cosine similarity mapped to a mark. Cheap and paraphrase-tolerant, but a bi-encoder encodes both texts independently and reports only how *close* they are. It cannot tell whether the candidate agrees with the reference or negates it, so answers reusing the expected vocabulary while stating the opposite scored like correct ones. A scalar also gives no basis for justifying a mark to a student.
 
@@ -106,6 +136,8 @@ The mark is the LLM's. The engine governs only the review decision. This keeps t
 ## Results
 
 Twelve handwritten booklets, marked independently by human examiners, whose totals are ground truth:
+
+<p align="center"><img src="assets/results.png" alt="Results against human examiners" width="100%"></p>
 
 | Metric | Value |
 |---|---|
@@ -186,6 +218,7 @@ evaldesk/
 │   └── EvalDesk_pipeline.ipynb    # full pipeline, outputs cleared
 ├── docs/
 │   └── EvalDesk_internship_report.pdf
+├── assets/                        # figures used in this README
 ├── README.md
 ├── requirements.txt
 └── LICENSE
